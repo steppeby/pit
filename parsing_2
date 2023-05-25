@@ -1,0 +1,91 @@
+import requests
+import re
+from bs4 import BeautifulSoup as BS
+import pandas as pd
+
+
+def get_clean_word(word: str) -> str:
+    word = re.sub('[^0-9a-zA-Zа-яА-ЯёЁ]', ' ', word, flags=re.IGNORECASE)
+    word = word.strip('-')
+    return word
+
+urls = ['https://detmir.kz/catalog/index/name/igry_i_igrushki/',
+        'http://detmir.kz/catalog/index/name/slides_swimming/',
+        'http://detmir.kz/catalog/index/name/towels/',
+        'http://detmir.kz/catalog/index/name/angles_sets_swimming/',
+        'http://detmir.kz/catalog/index/name/seats_hammocks_swimming/',
+        'http://detmir.kz/catalog/index/name/sponges_washcloths/',
+        'http://detmir.kz/catalog/index/name/toys_tub_accessories/',
+        'http://detmir.kz/catalog/index/name/circles_vests_mattresses_swimming/',
+        'http://detmir.kz/catalog/index/name/aspirators/',
+        'http://detmir.kz/catalog/index/name/bathing_cosmetics/',
+        'http://detmir.kz/catalog/index/name/sun_cream/',
+        'http://detmir.kz/catalog/index/name/insects_protection/',
+        'http://detmir.kz/catalog/index/name/cotton_products/',
+        'http://detmir.kz/catalog/index/name/care_babys_skin/',
+        'http://detmir.kz/catalog/index/name/manicure_sets/',
+        'http://detmir.kz/catalog/index/name/winter_cosmetics/',
+        'http://detmir.kz/catalog/index/name/soaps/',
+        'http://detmir.kz/catalog/index/name/dental_care/',
+        'http://detmir.kz/catalog/index/name/atopic_skin/',
+        'http://detmir.kz/catalog/index/name/household_chemicals/',
+        'http://detmir.kz/catalog/index/name/podguzniki/',
+        'http://detmir.kz/catalog/index/name/diapers_pants/',
+        'http://detmir.kz/catalog/index/name/diapers_swimming/',
+        'http://detmir.kz/catalog/index/name/disposable_diapers/',
+        'http://detmir.kz/catalog/index/name/wet_wipes/',
+        'http://detmir.kz/catalog/index/name/napkin_paper',
+        'http://detmir.kz/catalog/index/name/toilet_paper_wet_dry/',
+        'http://detmir.kz/catalog/index/name/powder_cream_diaper/',
+        'http://detmir.kz/catalog/index/name/night_panties/',
+        'http://detmir.kz/catalog/index/name/cases_dummies/',
+        'http://detmir.kz/catalog/index/name/teethers/',
+        'http://detmir.kz/catalog/index/name/holders_pacifiers/',
+        'http://detmir.kz/catalog/index/name/dummy/']
+
+df = pd.DataFrame({'name': [], 'priceDM': [], 'sale_price': [],'sku': []})
+for url in urls:
+    start_url = url
+    path = 'C:/Users/Jean/Desktop/test' + url[36:-1] + '.xlsx' #37 symbol
+    k = 1
+    start_url += "page/" + str(k) + "/?filter=price:1%2C999999;stores:3107%2C3396"
+    res = requests.get(url,cookies={'geoCityDMIso':'KZ-AKT'})
+    htmlData = res.content
+    parsedData = BS(htmlData, "html.parser")
+    while not parsedData.find_all('p',class_='Wb'):
+        cycle_url = url + "page/" + str(k) + "/?filter=price:1%2C999999;stores:3107%2C3396"
+        k += 1
+        res = requests.get(cycle_url,cookies={'geoCityDMIso':'KZ-AKT'})
+        htmlData = res.content
+        parsedData = BS(htmlData,"html.parser")
+        lst = []
+        a = parsedData.find_all(class_='Ju Jy x_0')
+        print(cycle_url)
+        for i in a:
+            href = i.find('a')
+            sku = href['href']
+            sku = re.sub('[^0-9]', ' ', sku).rstrip().lstrip()
+            res = i.find_all(attrs={"class":{"biJ","biH","Jw"}})
+            if len(res) == 3:
+                lst.append({'name': get_clean_word(res[2].text),
+                            'priceDM': get_clean_word(res[1].text),
+                            'sale_price': get_clean_word(res[0].text),
+                            'sku': sku})
+            elif len(res) == 2:
+                lst.append({'name': get_clean_word(res[1].text),
+                            'priceDM': '-',
+                            'sale_price': get_clean_word(res[0].text),
+                            'sku': sku})
+            else:
+                break
+
+        # #print(lst,len(lst))
+        page_df = pd.DataFrame(lst)
+        df = pd.concat([df,page_df])
+        #print(page_df)
+        # out = pd.concat([df, page_df])
+    df.to_excel(path, index=False)
+# print(out)
+
+    #print(a)
+    #break
