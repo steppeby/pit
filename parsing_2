@@ -64,16 +64,16 @@ df = pd.DataFrame({'name': [], 'priceDM': [], 'sale_price': [],'sku': []})
 page_lst = []
 path = 'C:/Users/Jean/Desktop/test/all_data.xlsx'  # 37 symbol
 for url in urls:
-    start_url = url
-    k = 1
-    start_url += "page/" + str(k) + "/?filter=price:1%2C999999;stores:3107%2C3396"
+    start_url = f"{url}page/1/?filter=price:1%2C999999;stores:3107%2C3396"
     res = requests.get(url,cookies={'geoCityDMIso':'KZ-AKT'})
     htmlData = res.content
     parsedData = BS(htmlData, "html.parser")
-    print(start_url)
+    print('start URL =>',start_url)
+
+    k = 1
     while not parsedData.find_all('p',class_='Wb'):
         cycle_url = url + "page/" + str(k) + "/?filter=price:1%2C999999;stores:3107%2C3396"
-        print(cycle_url)
+        print('page',str(k),'=>',cycle_url)
         k += 1
         res = requests.get(cycle_url,cookies={'geoCityDMIso':'KZ-AKT'})
         htmlData = res.content
@@ -82,10 +82,9 @@ for url in urls:
         a = parsedData.find_all(class_='Ju Jy x_0')
         for i in a:
             href = i.find('a')
-
-            sku = href['href']
-            sku = re.sub('[^0-9]', ' ', sku).rstrip().lstrip()
+            sku = re.sub('[^0-9]', ' ', href['href']).rstrip().lstrip()
             res = i.find_all(attrs={"class":{"biJ","biH","Jw"}})
+
             if len(res) == 3:
                 lst.append({'name': get_clean_word(res[2].text),
                             'priceDM': get_clean_word(res[1].text),
