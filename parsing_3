@@ -1,7 +1,10 @@
+import socket
+
 import requests
 import re
 from bs4 import BeautifulSoup as BS
 import pandas as pd
+from requests.exceptions import Timeout
 
 
 def clean(word: str) -> str:
@@ -38,7 +41,7 @@ urls = [
          'https://koko.kz/catalog/dekorativnaya_kosmetika/tinty_dlya_gub/',
          'https://koko.kz/catalog/nabory/']
 
-df = pd.DataFrame({'name': [], 'priceDM': [], 'sale_price': [],'sku': [], 'category': []})
+df = pd.DataFrame({'name': [], 'priceDM': [], 'sale_price': [],'sku': [], 'category': [], 'img': [], 'desc': []})
 page_lst = []
 path = 'C:/Users/Jean/Desktop/test/koko_parsed_prices.xlsx'  # 37 symbol
 for url in urls:
@@ -68,6 +71,28 @@ for url in urls:
         a = parsedData.find_all(class_='inner_wrap TYPE_1')
         for i in a:
             href = i.find('a')
+            #print(href['href'])
+            desc_url = 'https://koko.kz' + href['href']
+            print(desc_url)
+            for retry in range(3):
+                try:
+                    res = requests.get(desc_url, cookies={'current_region': '6277'}, timeout=10)
+                    htmlData = res.content
+                    parsedData = BS(htmlData, "html.parser")
+                    desc = parsedData.find_all('div',class_='content')
+                    try:
+                        desc = desc[0].text
+                    except IndexError:
+                        print('No description exists')
+                        desc = '-'
+                        break
+
+                    break
+                except Timeout:
+                    print(f'Error. Retry # {retry+1}')
+
+            img = i.find('img').get('data-src')
+            img = 'https://koko.kz' + img
             sku = re.sub('[^0-9]', ' ', href['href']).rstrip().lstrip()
             #print(href['href'])
             res = i.find_all(attrs={"class": {"item-title", "price_value"}})
@@ -75,9 +100,11 @@ for url in urls:
                         'priceDM': re.sub('[^0-9]', ' ', res[1].text),
                         'sale_price': '-',
                         'sku': sku,
-                        'category': category})
+                        'category': category,
+                        'img': img,
+                        'desc': desc})
 
         page_df = pd.DataFrame(lst)
-        df = pd.concat([df,page_df])
+        df = pd.concat([df, page_df])
 
 df.to_excel(path, index=False)
