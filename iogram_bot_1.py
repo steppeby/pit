@@ -5,6 +5,12 @@ from aiogram.types import InputFile
 from detskiy_mir_parser import parser
 import pandas
 
+
+# WARNING BROKEN CODE !
+# WARNING BROKEN CODE !
+# WARNING BROKEN CODE !
+
+
 TOKEN='#'
 
 bot = Bot(token=TOKEN)
